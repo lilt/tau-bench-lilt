@@ -612,9 +612,9 @@ def get_task_voice_configs_path(domain: str) -> Path:
     Returns:
         Path to the tasks_voice.json file.
     """
-    from tau2.utils.utils import DATA_DIR
+    from tau2.domain_data import get_domain_data_dir
 
-    return DATA_DIR / "tau2" / "domains" / domain / "tasks_voice.json"
+    return get_domain_data_dir(domain) / "tasks_voice.json"
 
 
 def get_or_load_task_voice_config(

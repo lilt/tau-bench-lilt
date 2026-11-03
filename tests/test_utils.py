@@ -3,6 +3,10 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
+from tau2.utils.utils import is_english_language
+
 
 def test_data_dir_environment_variable():
     """Test that DATA_DIR can be set via environment variable."""
@@ -37,3 +41,19 @@ def test_data_dir_fallback_to_source():
         utils_file = Path(tau2.utils.utils.__file__)
         expected_source_dir = utils_file.parents[3] / "data"
         assert tau2.utils.utils.DATA_DIR == expected_source_dir
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["en", "eng", "EN", "en-US", "en_US", "en-Latn", "en-GB", "english", "English"],
+)
+def test_is_english_language_true(value):
+    assert is_english_language(value) is True
+
+
+@pytest.mark.parametrize(
+    "value",
+    [None, "", "de", "deu", "de-DE", "zh-Hans", "ja", "cmn-Hans", "not-a-tag"],
+)
+def test_is_english_language_false(value):
+    assert is_english_language(value) is False

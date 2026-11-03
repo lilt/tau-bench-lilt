@@ -11,7 +11,7 @@ Every domain in `src/tau2/domains/<name>/` MUST have:
 - `data_model.py` — `DB` subclass (e.g., `FlightDB(DB)`)
 - `tools.py` — `ToolKitBase` subclass with `@is_tool(ToolType.READ|WRITE|GENERIC|THINK)` decorated methods
 - `environment.py` — exports `get_environment()`, `get_tasks()`, and optionally `get_tasks_split()`
-- `utils.py` — data paths pointing to `data/tau2/domains/<name>/`
+- `utils.py` — lazy data-path functions (e.g., `get_<name>_data_dir()`) backed by `tau2.domain_data.get_domain_data_dir(<name>)`. These resolve to `data/tau2/domains/<name>/` by default, or `data/tau2/localized/<locale>/domains/<name>/` when `--data-lang` is active.
 - `__init__.py`
 
 Optional: `user_tools.py`, `user_data_model.py`.

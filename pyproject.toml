@@ -2,6 +2,13 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.pdm.build]
+includes = [
+    "src/tau2",
+    "data/tau2/domains",
+    "data/tau2/user_simulator",
+]
+
 [project]
 name = "tau2"
 version = "1.0.1"
@@ -22,7 +29,7 @@ dependencies = [
     "psutil>=7.0.0",
     "loguru>=0.7.3",
     "docstring-parser>=0.16",
-    "litellm>=1.80.15,<1.82.7",
+    "litellm>=1.81.0,<1.82.7",
     "tenacity>=9.0.0",
     "deepdiff>=8.4.2",
     "addict>=2.4.0",
@@ -33,6 +40,8 @@ dependencies = [
     "requests>=2.31.0",
     "numpy>=1.24.0",
     "httpx>=0.24.0",
+    "langcodes[data]>=3.4.0",
+    "phonenumbers>=8.13.0",
 ]
 
 [project.optional-dependencies]
@@ -59,8 +68,13 @@ knowledge = [
     "rank-bm25>=0.2.2",
     "openai>=1.0.0",
 ]
+multilingual = [
+    "fasttext-numpy2-wheel>=0.9.2",
+    "huggingface_hub>=0.27.0",
+]
 gym = [
     "gymnasium>=1.2.2",
+    "tau2[multilingual]",
 ]
 dev = [
     "pytest>=8.3.5",
