@@ -6,10 +6,14 @@ instead of silently evaluating simulation.messages with the half-duplex
 evaluators (reported in PR #386).
 """
 
+import pytest
+
+import tau2.domain_data
 from tau2.data_model.message import Tick, ToolCall, ToolMessage
 from tau2.data_model.simulation import (
     AudioNativeConfig,
     Info,
+    LanguageConfig,
     Results,
     RewardInfo,
     SimulationRun,
@@ -17,6 +21,7 @@ from tau2.data_model.simulation import (
     UserInfo,
 )
 from tau2.data_model.tasks import EvaluationCriteria, Task, UserScenario
+from tau2.domain_data import LocalizedDataNotFoundError, get_data_lang
 from tau2.environment.environment import EnvironmentInfo
 from tau2.orchestrator.modes import CommunicationMode
 from tau2.run import get_tasks
@@ -327,8 +332,7 @@ class TestRegradingOptions:
         captured = self._capture_eval_kwargs(monkeypatch, results, fresh_tasks=True)
         current_task = get_tasks("mock", task_ids=["create_task_1"])[0]
         assert (
-            captured[0]["task"].evaluation_criteria
-            == current_task.evaluation_criteria
+            captured[0]["task"].evaluation_criteria == current_task.evaluation_criteria
         )
         assert captured[0]["task"].evaluation_criteria != EvaluationCriteria()
 
@@ -343,3 +347,90 @@ class TestRegradingOptions:
         )
         captured = self._capture_eval_kwargs(monkeypatch, results)
         assert captured[0]["task"].evaluation_criteria == EvaluationCriteria()
+
+
+# ---- Re-grading localized runs ----
+
+
+class TestRegradingLocale:
+    """Re-grading must read the domain data of the locale the run used and
+    recompute language verification, as the live run did."""
+
+    @pytest.fixture(autouse=True)
+    def localized_data_dir(self, tmp_path, monkeypatch):
+        (tmp_path / "tau2" / "localized" / "de-DE" / "domains" / "mock").mkdir(
+            parents=True
+        )
+        monkeypatch.setattr(tau2.domain_data, "DATA_DIR", tmp_path)
+        monkeypatch.setattr(tau2.domain_data, "_data_lang", None)
+
+    def _results(self, language_tag=None, data_lang=None) -> Results:
+        info = _make_info()
+        info.data_lang = data_lang
+        if language_tag is not None:
+            info.language_config = LanguageConfig(
+                language_tag=language_tag,
+                language_name="German",
+                glotlid_threshold=0.5,
+                glotlid_top_k=3,
+                acceptable_codes=["gsw_Latn"],
+            )
+        return Results(
+            info=info,
+            tasks=[_make_task("t0")],
+            simulations=[_make_half_duplex_sim("t0")],
+        )
+
+    def _grade(self, monkeypatch, results, **compute_kwargs):
+        captured = []
+
+        def fake_evaluate_simulation(**kwargs):
+            captured.append({**kwargs, "active_data_lang": get_data_lang()})
+            return RewardInfo(reward=1.0)
+
+        monkeypatch.setattr(
+            evaluate_trajectories_module,
+            "evaluate_simulation",
+            fake_evaluate_simulation,
+        )
+        compute_simulation_rewards(results, **compute_kwargs)
+        return captured
+
+    def test_recorded_data_lang_is_active_while_grading(self, monkeypatch):
+        captured = self._grade(
+            monkeypatch, self._results(language_tag="de", data_lang="de-DE")
+        )
+        assert captured[0]["active_data_lang"] == "de-DE"
+        assert get_data_lang() is None  # restored afterwards
+
+    def test_old_results_resolve_locale_from_language(self, monkeypatch):
+        captured = self._grade(monkeypatch, self._results(language_tag="de"))
+        assert captured[0]["active_data_lang"] == "de-DE"
+
+    def test_explicit_data_lang_wins(self, monkeypatch):
+        captured = self._grade(
+            monkeypatch,
+            self._results(language_tag="de", data_lang="de-DE"),
+            data_lang="en-US",
+        )
+        assert captured[0]["active_data_lang"] == "en-US"
+
+    def test_language_verification_recomputed(self, monkeypatch):
+        captured = self._grade(
+            monkeypatch, self._results(language_tag="de", data_lang="de-DE")
+        )
+        kwargs = captured[0]
+        assert kwargs["language_info"].bcp47_tag == "de"
+        assert kwargs["glotlid_threshold"] == 0.5
+        assert kwargs["glotlid_top_k"] == 3
+        assert kwargs["glotlid_acceptable_codes"] == ["gsw_Latn"]
+        assert kwargs["fail_on_lid_error"] is False
+
+    def test_english_results_unchanged(self, monkeypatch):
+        captured = self._grade(monkeypatch, self._results())
+        assert captured[0]["active_data_lang"] is None
+        assert "language_info" not in captured[0]
+
+    def test_missing_localized_data_fails(self, monkeypatch):
+        with pytest.raises(LocalizedDataNotFoundError):
+            self._grade(monkeypatch, self._results(language_tag="ko"))

@@ -189,6 +189,12 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+# Claude Code
+.claude/
+
+# Claude Code local directory
+**/.claude/
+
 # PyPI configuration file
 .pypirc
 
@@ -221,6 +227,10 @@ data/simulations/.credentials/
 #   These branches contain ~198MB of *_simulation.json blobs in git history.
 #   After deleting the branches, GitHub will eventually GC the orphaned objects.
 *_simulation.json
+
+# LLM caching
+**/.litellm_cache/
+**/.transliteration_cache/
 
 # Cursor IDE
 .cursor/
