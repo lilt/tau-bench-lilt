@@ -11,6 +11,7 @@ import pytest
 
 import tau2.domain_data
 from tau2.cli import resolve_language_args
+from tau2.config import DEFAULT_LANGUAGE
 from tau2.domain_data import (
     LocalizedDataNotFoundError,
     get_domain_data_dir,
@@ -29,10 +30,11 @@ def localized_data_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(tau2.domain_data, "_data_lang", None)
 
 
-def make_args(language=None, data_lang=None, domain="airline"):
+def make_args(language=None, data_lang=None, domain="airline", upstream_tasks=False):
     return Namespace(
         language=language,
         data_lang=data_lang,
+        upstream_tasks=upstream_tasks,
         domain=domain,
         glotlid_threshold=None,
         glotlid_acceptable_codes=None,
@@ -84,3 +86,24 @@ class TestResolveLanguageArgs:
         data_lang, language_info = resolve_language_args(make_args())
         assert data_lang is None
         assert language_info is None
+
+    def test_default_language_uses_corrected_tasks(self):
+        data_lang, language_info = resolve_language_args(
+            make_args(language=DEFAULT_LANGUAGE)
+        )
+        assert data_lang == "en-US"
+        assert language_info.bcp47_tag == "en-US"
+
+    def test_upstream_tasks_use_original_data(self, tmp_path):
+        data_lang, language_info = resolve_language_args(
+            make_args(language=DEFAULT_LANGUAGE, upstream_tasks=True)
+        )
+        assert data_lang is None
+        assert language_info.bcp47_tag == "en-US"
+        assert (
+            get_domain_data_dir("airline") == tmp_path / "tau2" / "domains" / "airline"
+        )
+
+    def test_upstream_tasks_rejects_non_english(self):
+        with pytest.raises(SystemExit, match="English runs only|only applies"):
+            resolve_language_args(make_args(language="de", upstream_tasks=True))

@@ -64,7 +64,7 @@ def require_localized_data(locale: str | None, language: str | None = None) -> N
     root = DATA_DIR / "tau2" / "localized"
     hint = (
         "The localized task data is distributed separately as a gated Hugging "
-        "Face dataset; copy it into data/tau2/ (see LILT_README.md)."
+        "Face dataset; download it into data/tau2/ (see README.md)."
     )
     if locale is None:
         if language and not is_english_language(language):

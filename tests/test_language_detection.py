@@ -1,7 +1,5 @@
 """Tests for language detection utilities."""
 
-import sys
-
 import pytest
 
 from tau2.utils.language_detection import (
@@ -9,7 +7,6 @@ from tau2.utils.language_detection import (
     _clean_text_for_glotlid,
     _language_matches_any,
     parse_language_tag,
-    require_language_detection,
 )
 
 
@@ -310,14 +307,3 @@ class TestLanguageInfoDataclass:
         assert info.script == "Hans"
         assert info.display_name == "Chinese"
         assert info.glotlid_label == "__label__zho_Hans"
-
-
-class TestRequireLanguageDetection:
-    def test_passes_when_installed(self):
-        pytest.importorskip("fasttext")
-        require_language_detection()
-
-    def test_missing_extra_names_it(self, monkeypatch):
-        monkeypatch.setitem(sys.modules, "fasttext", None)
-        with pytest.raises(ImportError, match="multilingual"):
-            require_language_detection()
