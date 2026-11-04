@@ -358,15 +358,17 @@ class TestRegradingLocale:
 
     @pytest.fixture(autouse=True)
     def localized_data_dir(self, tmp_path, monkeypatch):
-        (tmp_path / "tau2" / "localized" / "de-DE" / "domains" / "mock").mkdir(
-            parents=True
-        )
+        for locale in ("de-DE", "en-US"):
+            (tmp_path / "tau2" / "localized" / locale / "domains" / "mock").mkdir(
+                parents=True
+            )
         monkeypatch.setattr(tau2.domain_data, "DATA_DIR", tmp_path)
         monkeypatch.setattr(tau2.domain_data, "_data_lang", None)
 
-    def _results(self, language_tag=None, data_lang=None) -> Results:
+    def _results(self, language_tag=None, data_lang=None, upstream_tasks=False):
         info = _make_info()
         info.data_lang = data_lang
+        info.upstream_tasks = upstream_tasks
         if language_tag is not None:
             info.language_config = LanguageConfig(
                 language_tag=language_tag,
@@ -426,10 +428,22 @@ class TestRegradingLocale:
         assert kwargs["glotlid_acceptable_codes"] == ["gsw_Latn"]
         assert kwargs["fail_on_lid_error"] is False
 
-    def test_english_results_unchanged(self, monkeypatch):
+    def test_old_english_results_use_corrected_tasks(self, monkeypatch):
         captured = self._grade(monkeypatch, self._results())
-        assert captured[0]["active_data_lang"] is None
+        assert captured[0]["active_data_lang"] == "en-US"
         assert "language_info" not in captured[0]
+
+    def test_upstream_results_use_original_data(self, monkeypatch):
+        captured = self._grade(monkeypatch, self._results(upstream_tasks=True))
+        assert captured[0]["active_data_lang"] is None
+
+    def test_upstream_tasks_override(self, monkeypatch):
+        captured = self._grade(
+            monkeypatch,
+            self._results(language_tag="en-US", data_lang="en-US"),
+            upstream_tasks=True,
+        )
+        assert captured[0]["active_data_lang"] is None
 
     def test_missing_localized_data_fails(self, monkeypatch):
         with pytest.raises(LocalizedDataNotFoundError):
