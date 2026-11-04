@@ -856,13 +856,6 @@ def main():
     def run_command(args):
         """Fill in glotlid/greeting args from language presets when not explicitly set."""
         data_lang, _language_info = resolve_language_args(args)
-        if args.language:
-            from tau2.utils.language_detection import require_language_detection
-
-            try:
-                require_language_detection()
-            except ImportError as e:
-                raise SystemExit(f"error: {e}") from e
 
         # Merge user-supplied LLM args on top of the built-in defaults so that
         # passing e.g. --agent-llm-args '{"reasoning_effort": "low"}' doesn't

@@ -43,22 +43,6 @@ def _clean_text_for_glotlid(text: str) -> str:
     return cleaned.strip()
 
 
-def require_language_detection() -> None:
-    """Fail fast when the GlotLID dependencies (the `multilingual` extra) are
-    missing. Language verification runs only after a conversation has been
-    generated, and a run retries a simulation on any error, so a missing
-    import would otherwise surface only after every conversation was paid for."""
-    try:
-        import fasttext  # noqa: F401
-        import huggingface_hub  # noqa: F401
-    except ImportError as e:
-        raise ImportError(
-            f"--language needs GlotLID language detection, but {e.name!r} is not "
-            "installed. Install the multilingual extra: `uv sync --extra "
-            "multilingual`, or run with `uv run --extra multilingual tau2 ...`."
-        ) from e
-
-
 def _get_glotlid_model():
     """
     Lazy load the GlotLID model from HuggingFace Hub.
